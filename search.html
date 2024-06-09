@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <!-- <link rel="shortcut icon" href="favicon.ico" type="image/x-icon"> -->
+  <script src="script.js"></script>
+  <title>MRS</title>
+</head>
+
+<body>
+  <div class="container">
+    <div id="nav">
+      <div id="logo">
+        <img src="logo.png" alt="logo" srcset="">
+        <span id="mrs">Movie Recommendation System</span>
+      </div>
+
+
+      <div id="menu">
+        <ul id="nav-items">
+          <li><a href="index.html">Home</a> </li>
+          <li><a href="">Trending</a> </li>
+          <li><a href="search.html">Search</a> </li>
+          <li><a href="" class="reg-col">Register</a> </li>
+          <li><a href="" class="sign-col"> Sign in</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+
+
+    <div id="main-content">
+      <div id="glass">
+        
+        <label for="" style="font-family: cursive;">Search by movie, geners and actors</label>
+        <input type="text" class="rec" list="rec" id="recommend">
+        <datalist id="rec"></datalist>
+
+        <span><button id="search" class="sign-col"> Search/Reccomend</button></span>
+      </div>
+
+      <div id="cards">
+
+      </div>
+
+    </div>
+
+
+  </div>
+
+
+  <script>
+
+    function getRandomElements(recs, ids, n = 5) {
+      if (recs.length < 5) {
+        return [recs, ids];
+      }
+
+      let randomrecs = [];
+      let randomids = [];
+      let remainingrecs = recs.slice(); // Make a copy of the array
+      let remainingids = ids.slice(); // Make a copy of the array
+
+      for (let i = 0; i < n; i++) {
+        let randomIndex = Math.floor(Math.random() * remainingrecs.length);
+        randomrecs.push(remainingrecs[randomIndex]);
+        randomids.push(remainingids[randomIndex]);
+        remainingrecs.splice(randomIndex, 1); // Remove the selected element from the remaining elements
+        remainingids.splice(randomIndex, 1); // Remove the selected element from the remaining elements
+      }
+
+      return [randomrecs, randomids];
+    }
+
+
+    // function to delete cards 
+    function clearCards(container) {
+      // Remove all child elements from the container
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+    }
+
+    // Function to add a card inside a div
+    function addCard(title, background, Overview, imdb_id) {
+      // console.log(title)
+      const cardContainer = document.getElementById('cards');
+      cardContainer.style.bordertop = "1px solid white";
+      cardContainer.style.boxShadow = "rgb(138, 138, 138) 0px -2px 2px";
+      clearCards(cardContainer);
+
+      //addinf new cards
+      for (i = 0; i < title.length; i++) {
+        // Create a new div element for the card
+        const card = document.createElement('div');
+        const cardOverview = document.createElement('p');
+
+        card.className = 'card-prop';
+        card.style.background = `url(${background[i]})`;
+        card.style.backgroundPosition = "center";
+        card.style.backgroundRepeat = "no-repeat";
+        card.style.backgroundSize = "cover";
+
+        cardOverview.className = 'card-overview';
+        cardOverview.innerText = `${Overview[i]}`;
+
+        const cardTitle = document.createElement('button');
+        cardTitle.className = 'card-content';
+        cardTitle.innerHTML = `${title[i]}`;
+        cardTitle.id = `${imdb_id[i]}`;
+        const I = imdb_id[i];
+        // console.log(I);
+        cardTitle.onclick = function () {
+          const ID = cardTitle.id;
+          console.log(ID)
+          const url = `https://www.imdb.com/title/${ID}/`
+          window.open(url, "_blank")
+        }
+
+        cardTitle.style.background = "transparent";
+        cardTitle.style.backdropFilter = `blur(10px) brightness(80%)`
+
+        // Append the card to the cardContainer div
+        card.appendChild(cardTitle);
+        card.appendChild(cardOverview);
+        cardContainer.appendChild(card);
+      }
+
+    }
+
+    // Fetch and parse JSON file
+    let moviesPromises = fetch('movies.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(response => {
+        // console.log(response)
+        const selectElement = document.getElementById('rec');
+
+        let options = [];
+        // Array of options to add
+        for (key in response["title"]) {
+          options.push(response["title"][key]);
+        }
+        options = options.sort();
+
+        // Loop through the options array and create <option> elements
+        options.forEach(optionText => {
+          // Create a new <option> element
+          const option = document.createElement('option');
+          // option.style.cursor = "pointer";
+
+          // Set the text content of the option
+          option.textContent = optionText;
+
+          // Append the option to the select element
+          selectElement.appendChild(option);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching or parsing movies JSON:', error);
+        throw error; // Re-throwing the error to propagate it to the next catch block
+      });
+
+    let moviesPromise = fetch('movies.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .catch(error => {
+        console.error('Error fetching or parsing movies JSON:', error);
+        throw error; // Re-throwing the error to propagate it to the next catch block
+      });
+
+    let similarityPromise = fetch('similarity.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .catch(error => {
+        console.error('Error fetching or parsing similarity JSON:', error);
+        throw error; // Re-throwing the error to propagate it to the next catch block
+      });
+
+
+
+    const btn = document.querySelector('#search');
+    btn.addEventListener('click', (e) => {
+
+      e.preventDefault();
+      let querry = document.querySelector('#recommend').value;
+      // if (querry == '') {
+      //   querry = document.querySelector('.rec').value;
+      // }
+      // console.log(querry);
+
+      Promise.all([moviesPromise, similarityPromise])
+        .then(([moviesData, similarityData]) => {
+
+          function recommend1(movie) {
+            movie = movie.toLowerCase().toString(); // Convert input to lowercase
+            let recs = [];
+            let ids = [];
+
+            let index = -1;
+
+            for (key in moviesData["title"]) {
+              if (moviesData["title"][key].toLowerCase() == movie) {
+                index = key;
+                break;
+              }
+            }
+
+            console.log(index);
+
+            if (index !== -1) {
+              let d = similarityData[index];
+
+              const simiobject = d.reduce((acc, currentValue, index) => {
+                acc[index] = currentValue;
+                return acc;
+              }, {});
+
+              let l = [];
+              for (key in simiobject) {
+                l.push(simiobject[key]);
+              }
+
+              l = [...new Set(l)];
+              l.sort((a, b) => b - a);
+
+              let newsimiobject = {};
+
+              for (i = 2; i < 7; i++) {
+                let val = l[i]
+                // console.log(val);
+                for (key in simiobject) {
+                  if (simiobject[key] == val) {
+                    // console.log(key)
+                    newsimiobject[l[i]] = key;
+                    break;
+                  }
+                }
+              }
+
+              console.log(newsimiobject);
+
+              // const base_url = "https://api.themoviedb.org/3";
+              // const api_key = "e22fa224d94d567eca6e597c64aebeae";
+
+              for (key in newsimiobject) {
+                let id = newsimiobject[key];
+                let addmovies = moviesData["title"][id];
+                recs.push(addmovies);
+
+                for (k in moviesData["title"]) {
+                  if (moviesData["title"][k] == addmovies) {
+                    let realId = moviesData["id"][k]
+                    ids.push(realId);
+                    break;
+                  }
+                }
+              }
+            }
+
+            else {
+              // console.log("invalid movie");
+              //search on based of gener
+              let generObject = moviesData['genres'];
+              // console.log(generObject)
+
+              let count = 0;
+              // traversing each array in generobject 
+              for (key in generObject) {
+                const genarray = generObject[key];
+                if (count < 20) {
+                  for (let j = 0; j < genarray.length; j++) {
+                    if (movie == genarray[j].toLowerCase()) {
+                      recs.push(moviesData["title"][key])
+                      ids.push(moviesData["id"][key]);
+                      count++;
+                      // console.log(recs);
+                      // console.log(ids);
+                      break;
+                    }
+                  }
+
+                }
+              }
+
+              if (recs.length !== 0) {
+                [recs, ids] = getRandomElements(recs, ids);
+              }
+
+              else {
+                console.log("invalid 1");
+                // searching on basis of actor
+
+                let castObject = moviesData["cast"];
+                // console.log(castObject)
+
+                let countcast = 0;
+                // traversing each array in generobject 
+                for (key in castObject) {
+                  const Castarray = castObject[key];
+                  if (countcast < 20) {
+                    for (let k = 0; k < Castarray.length; k++) {
+                      if (movie == Castarray[k].toLowerCase()) {
+                        recs.push(moviesData["title"][key])
+                        ids.push(moviesData["id"][key]);
+                        countcast++;
+                        break;
+                      }
+                    }
+                  }
+                }
+                // console.log(recs);
+                // console.log(ids);
+
+                if (recs.length !== 0) {
+                  [recs, ids] = getRandomElements(recs, ids);
+                }
+                else {
+                  console.log("invalid 2")
+
+                  let crewObject = moviesData["crew"];
+                  // console.log(castObject)
+
+                  let countcrew = 0;
+                  // traversing each array in generobject 
+                  for (key in crewObject) {
+                    const Crewarray = crewObject[key];
+                    if (countcrew < 20) {
+                      for (let k = 0; k < Crewarray.length; k++) {
+                        if (movie == Crewarray[k].toLowerCase()) {
+                          recs.push(moviesData["title"][key])
+                          ids.push(moviesData["id"][key]);
+                          countcrew++;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  console.log(recs);
+                  console.log(ids);
+
+                  if (recs.length !== 0) {
+                    [recs, ids] = getRandomElements(recs, ids);
+
+                  }
+                }
+              }
+            }
+            return [recs, ids];
+          }
+
+          async function findbgOver(ids) {
+            let background = [];
+            let Overview = [];
+            let imdb_id = [];
+            for (let i = 0; i < ids.length; i++) {
+              try {
+                const response = await fetch(`https://api.themoviedb.org/3/movie/${ids[i]}?api_key=e22fa224d94d567eca6e597c64aebeae&language=en-US`);
+                const movieData = await response.json();
+                const imgpath = movieData["poster_path"];
+                const overview = movieData["overview"];
+                const imagepath = `https://image.tmdb.org/t/p/original/${imgpath}`;
+
+                background.push(imagepath);
+                Overview.push(overview);
+
+                // geting imdb id to target the movies
+                const imdbId = movieData["imdb_id"];
+                // console.log(imdbId);
+                imdb_id.push(imdbId);
+
+              } catch (err) {
+                console.error(err);
+                background.push("sorry");
+                Overview.push(`Sorry, we could not retrieve the information for this movie.`);
+              }
+            }
+            // console.log(background);
+            // console.log(imdb_id);
+            addCard(title, background, Overview, imdb_id);
+          }
+
+          let [title, ids] = recommend1(querry);
+          console.log(title,ids);
+          findbgOver(ids);
+
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+
+    })
+
+
+  </script>
+
+</body>
+
+</html>
